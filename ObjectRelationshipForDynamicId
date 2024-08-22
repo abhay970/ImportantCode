@@ -1,0 +1,48 @@
+String patientId='a00J1000001wQaFIAU';
+Patient__c patient = [SELECT Id, Name FROM Patient__c WHERE Id = :patientId LIMIT 1];
+List<Medication_Request__c> medicationRequests = [SELECT Id,Name, Patient__c FROM Medication_Request__c WHERE Patient__c = :patient.Id];
+Set<Id> medicationRequestIds = new Set<Id>();
+for (Medication_Request__c mr : medicationRequests) {
+    medicationRequestIds.add(mr.Id);
+}
+List<Medication__c> medications = [SELECT Id, Name, Medication_Request__c FROM Medication__c WHERE Medication_Request__c IN :medicationRequestIds];
+List<Practitioner__c> practitioners = [SELECT Id, Name, Medication_Request__c FROM Practitioner__c WHERE Medication_Request__c IN :medicationRequestIds];
+Map<String, Object> patientMap = new Map<String, Object>();
+patientMap.put('patientName', patient.Name);
+List<Map<String, Object>> medicationRequestList = new List<Map<String, Object>>();
+Map<Id, List<Map<String, String>>> medMap = new Map<Id, List<Map<String, String>>>();
+Map<Id, List<Map<String, String>>> pracMap = new Map<Id, List<Map<String, String>>>();
+for (Medication__c med : medications) {
+    if (!medMap.containsKey(med.Medication_Request__c)) {
+        medMap.put(med.Medication_Request__c, new List<Map<String, String>>());
+    }
+    medMap.get(med.Medication_Request__c).add(new Map<String, String>{
+        'id' => med.Id,
+        'medName' => med.Name
+    });
+}
+for (Practitioner__c prac : practitioners) {
+    if (!pracMap.containsKey(prac.Medication_Request__c)) {
+        pracMap.put(prac.Medication_Request__c, new List<Map<String, String>>());
+    }
+    pracMap.get(prac.Medication_Request__c).add(new Map<String, String>{
+        'id' => prac.Id,
+        'pracName' => prac.Name
+    });
+}
+for (Medication_Request__c medReq : medicationRequests) {
+    Map<String, Object> medReqMap = new Map<String, Object>();
+    medReqMap.put('medReqName',medReq.Name);
+    if(medMap.containsKey(medReq.Id)){
+        medReqMap.put('medication',medMap.get(medReq.Id));
+    }
+    if(pracMap.containsKey(medReq.Id)){
+        medReqMap.put('practioner',pracMap.get(medReq.Id));
+    }
+    if(medReqMap.size()>0){
+        medicationRequestList.add(medReqMap);
+    }
+}
+patientMap.put('medicationRequest', medicationRequestList);
+string jsonstring = JSON.serialize(patientMap);
+System.debug('jsonstring: '+jsonstring);//{"medicationRequest":[{"practioner":[{"pracName":"P-1-MR-2-Albert","id":"a03J1000002IKHZIA4"}],"medication":[{"medName":"M-1-MR-2-Albert","id":"a02J10000033HQAIA2"}],"medReqName":"MR-2-Albert"},{"practioner":[{"pracName":"P-1-MR-1-Albert","id":"a03J1000002IJXEIA4"}],"medication":[{"medName":"M-1-MR-1-Albert","id":"a02J10000033H6tIAE"},{"medName":"M-2-MR-1-Albert","id":"a02J10000033H78IAE"}],"medReqName":"MR-1-Albert"}],"patientName":"Albert Deo"}
