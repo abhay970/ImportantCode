@@ -1,3 +1,5 @@
+//below code use Any where either Lookup relationship Or MasterDetails RelationShip
+//For MasterDetails Generally like code: child to parent / parent to child (but instead of this we can used below code)
 String patientId='a00J1000001wQaFIAU';
 Patient__c patient = [SELECT Id, Name FROM Patient__c WHERE Id = :patientId LIMIT 1];
 List<Medication_Request__c> medicationRequests = [SELECT Id,Name, Patient__c FROM Medication_Request__c WHERE Patient__c = :patient.Id];
