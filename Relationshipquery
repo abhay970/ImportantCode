@@ -1,0 +1,109 @@
+SELECT count(Id), Industry FROm Account Group By Industry
+
+SELECT Id, Name, Email, Company, OwnerId, TYPEOF OWNER WHEN User THEN Id, Name, Email WHEN Group THEN Id, Name END FROM Lead WHERE Owner.Type IN ('User', 'Group')
+
+SELECT Id, Subject, Description, WhatId, TYPEOF What WHEN Account THEN Id, Name, Industry, Phone WHEN Opportunity THEN Id, Name, Amount, StageName WHEN CASE THEN Id, CaseNumber, Status, ContactId END FROM Event WHERE What.TYPE IN ('Account', 'Opportunity' )
+
+SELECT Id, Subject, Description, WhatId, TYPEOF What WHEN Account THEN Id, Name, Industry, Phone WHEN Opportunity THEN Id, Name, Amount, StageName WHEN CASE THEN Id, CaseNumber, Status, ContactId END FROM Event WHERE What.TYPE IN ('Account', 'Opportunity', 'Case' )
+
+SELECT Id, Subject, Description, WhatId, TYPEOF What WHEN Account THEN Id, Name, Industry, Phone WHEN Opportunity THEN Id, Name, Amount, StageName WHEN CASE THEN Id, CaseNumber, Status, ContactId END FROM Event
+
+SELECT Id, Subject, Description, TYPEOF What WHEN Account THEN Id, Name, Industry, Phone WHEN Opportunity THEN Id, Name, Amount, StageName WHEN CASE THEN Id, CaseNumber, Status, ContactId END FROM Event
+
+SELECT Id, WhoId, WhatId, Subject, ActivityDateTime, ActivityDate, Description, What.Id, What.Name FROM Event
+
+SELECT Id, WhoId, WhatId, Subject, ActivityDateTime, ActivityDate, Description, What.Id, What.Name FROM Event Where What.Type = 'Account'
+
+SELECT Id, WhoId, WhatId, Subject, ActivityDateTime, ActivityDate, Description, What.Type FROM Event Where What.Type = 'Account'
+
+SELECT Id, WhoId, WhatId, Subject, ActivityDateTime, ActivityDate, Description, What.Type FROM Event
+
+SELECT Id, WhoId, WhatId, Subject, ActivityDateTime, ActivityDate, Description FROM Event
+
+SELECT Id, CaseNumber, Subject, TYPEOF OWNER WHEN User THEN Id, Name, Email WHEN Group THEN NAME END FROM Case WHERE OWNER.TYPE IN('User', 'Queue' )
+
+SELECT Id, CaseNumber, Subject, TYPEOF OWNER WHEN User THEN Id, Name, Email WHEN Group THEN NAME END FROM Case
+
+=========================================================================================================================================================================
+how to make dynamic query in apex
+
+// 0 , 1, 10, 29
+String accountName = 'Genepoint';
+List<Account> accountList = [SELECT Id, Name
+                             FROM Account
+                             WHERE Name =: accountName
+                             LIMIT 50000];
+System.debug(' accountList '+ accountList);
+
+List<Payment__c> paymentList = [SELECT Id, Name FROM Payment__c LIMIT 50000];
+System.debug(' paymentList '+ paymentList);
+
+if( paymentList.size() > 0){
+
+}
+
+if( !paymentList.isEmpty() ){
+
+}
+
+List<String> accountIndustries = new List<String>();
+accountIndustries.add('Education');
+accountIndustries.add('Banking');
+accountIndustries.add('Consulting');
+
+List<Account> accountListWithIndustry = [SELECT Id, Name
+                             FROM Account
+                             WHERE Industry IN: accountIndustries
+                             LIMIT 50000];
+System.debug(' accountListWithIndustry '+ accountListWithIndustry);
+// Single Value =:
+// Multiple Values IN:
+
+String keyword = 'test'; //% %
+// %test%
+String likeParams = '%'+keyword+'%'; // %test%
+
+List<Account> accountListWithLike = [SELECT Id, Name
+                             FROM Account
+                             WHERE Name Like:likeParams
+                             LIMIT 50000];
+System.debug(' accountListWithLike '+ accountListWithLike);
+
+
+public static void searchAccount(String name){
+    String likeParams = '%'+name+'%'; // %test%
+    List<Account> accountListWithLike = [SELECT Id, Name
+                             FROM Account
+                             WHERE Name Like:likeParams
+                             LIMIT 50000];
+    System.debug(' accountListWithLike '+ accountListWithLike);
+}
+
+List<Event> eventList = [SELECT Id, Subject, Description, WhatId,
+     TYPEOF What
+     WHEN Account THEN Id, Name, Industry, Phone
+     WHEN Opportunity THEN Id, Name, Amount, StageName
+     WHEN CASE THEN Id, CaseNumber, Status, ContactId END
+     FROM Event
+     WHERE What.TYPE IN ('Account', 'Opportunity', 'Case' )
+];
+System.debug(' eventList '+ eventList);
+
+for(Event evt : eventList){
+    System.debug(' Event Record \n '+ evt);
+    System.debug(' Event Record \n '+ evt.Subject);
+}
+
+List<AggregateResult> agr = [SELECT count(Id), Industry
+                             FROM Account Group By Industry];
+System.debug(' agr '+ agr);
+
+//SOQL For Loop
+// Contact --> Account (AccountId)
+Set<Id> accountIds = new Set<Id>();
+for(Contact con : [SELECT Id, Name, AccountId FROM Contact Where Email <> null LIMIT 50000]){
+    //System.debug(' contact records \n '+con);
+    accountIds.add(con.AccountId);
+}
+System.debug(' accountIds \n '+accountIds);
+List<Account> limitedAccounts = [SELECT Id FROM Account WHERE Id IN : accountIds ];
