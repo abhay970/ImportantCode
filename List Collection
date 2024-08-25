@@ -1,0 +1,129 @@
+// Syntax
+#1 -
+List<Data Type> variabname = new List<Data Type>();
+
+// Declare & Memory Allocation
+List<String> fruitList = new List<String>(); // Size = 0, Size = 1
+
+// Declare & Memory Allocation & Value Assignment
+#2 -
+List<String> fruitList = new List<String>{'apple', 'banana', 'orange'};
+
+List<String> orderStatusList = new List<String>{
+    'Created','Submit','In Process',
+    'Out for Delivery','Delivered',
+    'Return Requested','Return Pickup Scheduled',
+    'Retured', 'Refund Requested',
+    'Refunded'
+};
+
+List<Integer> numbersList = new List<Integer>{1,2,4,5,3};
+
+// Declare the variable
+#3 -
+List<String> fruitList; // null
+
+fruitList = new List<String>(); // Memory Allocation
+
+fruitList = new List<String>{'apple', 'banana', 'orange'}; // Memory Allocation & Value Assignment
+
+fruitList1 = new List<String>{'apple', 'banana', 'orange'};
+
+============================================
+
+When to Use List-------------------
+
+// List<Data Type> variabname = new List<Data Type>();
+List<Integer> numbers = new List<Integer>{4,5,6,6,6,6};
+System.debug(' numbers '+ numbers);
+List<String> frtuits = new List<String>(); // heap memory
+frtuits.add('Grapes'); //0
+frtuits.add('Mango'); //1
+frtuits.add('Apple');//2
+frtuits.add('Grapes');//3
+frtuits.add('Banana');//4
+// Size - 5
+// Start Index = 0, Last Index = size - 1 = 4
+System.debug(' frtuits '+ frtuits);
+frtuits.set(1, 'Guava');
+System.debug(' frtuits after set method '+ frtuits);
+System.debug(' Index 2 '+ frtuits.get(5) );
+String abc = frtuits.get(2);
+Integer xyz = numbers.get(2); // String
+//Illegal assignment from String (Right side after =) to Integer(left side before =)
+Integer length = frtuits.size();
+Boolean isEmpty = frtuits.isEmpty();
+System.debug( length );
+// 6MB - Sync , 12MB - Async
+frtuits.clear();
+System.debug( frtuits );
+System.debug( frtuits.get(2) );
+if(frtuits.isEmpty() == false){
+    System.debug(' List is Not Blank ');
+}else{
+    System.debug(' List is Blank ');
+}
+
+============================
+Set<Integer> colorsSet = new Set<Integer>();
+Set<Integer> colorsSet = new Set<Integer>{'Red', 'Black', 'Blue', 'Green'};
+Set<Integer> colorsSet;
+
+================================When to Use Set
+
+Set<String> colorsSet = new Set<String>{'black','Red', 'Black', 'Blue', 'Green','Black'};
+System.debug(colorsSet);
+System.debug(colorsSet.contains('Black') ) ;
+Integer length = colorsSet.size();
+Boolean isEmpty = colorsSet.isEmpty();
+//colorsSet.clear();
+
+Set<String> fruitsSet = new Set<String>();
+fruitsSet.add('Apple');
+fruitsSet.add('Banana');
+fruitsSet.add('Mango');
+colorsSet.addAll( fruitsSet );
+System.debug(colorsSet);
+
+Set<Integer> numberSet = new Set<Integer>{3,4,5,5,5};
+colorsSet.addAll( numberSet );
+--------------------------------
+Set<String> colorsSet = new Set<String>{'black','Red', 'Black', 'Blue', 'Green','Black'};
+System.debug(colorsSet + '\n ');
+System.debug(colorsSet.contains('Black') ) ;
+Integer length = colorsSet.size();
+Boolean isEmpty = colorsSet.isEmpty();
+colorsSet.clear();
+
+Set<String> fruitsSet = new Set<String>();
+fruitsSet.add('Apple');
+
+Account accountRecord = new Account();
+accountRecord.Name = 'SET ACCOUNT DEMO';
+
+Account accountRecord1 = new Account();
+accountRecord1.Name = 'SET ACCOUNT DEMO';
+
+Account accountRecord2 = new Account();
+accountRecord2.Name = 'SET ACCOUNT DEMO2';
+
+Set<Account> accountSet = new Set<Account>();
+accountSet.add(accountRecord);
+accountSet.add(accountRecord1);
+accountSet.add(accountRecord2);
+System.debug(accountSet);
+
+List<Account> accountList = new List<Account>();
+// accountList.add();
+accountList.addAll(accountSet); // Set<Account> // Account
+System.debug(accountList);
+insert accountList;
+/*
+global class List{
+    global void addAll(List<Object> elements){
+        for(Ineteger i=0; i< elements.length; i ++){
+            accountList.add( elements[i] );
+        }
+    }
+}
+*/
