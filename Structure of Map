@@ -1,0 +1,107 @@
+Map<String, String> countryCurrencies = new Map<String, String>();
+======
+List<String> ABC = new List<String>();
+#1 -
+
+Map<String, Integer> accountMap = new Map<String, Integer>();
+accountMap.put('Acme', 10000);
+accountMap.put('XYZ Corp', 5000);
+accountMap.put('ABC Company', 7500);
+
+// Retrieve the value for a specific key
+Integer acmeValue = accountMap.get('Acme');
+System.debug(acmeValue); // Outputs 10000
+
+#2 -
+Map<String, Integer> accountMap = new Map<String, Integer>{
+    'Acme' => 10000, 'XYZ Corp'=> 500
+};
+
+Boolean exists = accountMap.containsKey('Acme');
+// exists = True
+
+accountMap.keySet(); // Returns the Set<Data Type of the Map Key>
+accountMap.values(); // Returns the List<Data Type of Map Value>
+
+Set<String> accountNameSet = accountMap.keySet();
+List<Integer> revenueList = accountMap.values();
+
+#3 -
+Map<String, Integer> accountMap
+
+// Complex Map
+========
+Map<String, String> accountMap = new Map<String, Sting>();
+accountMap.put('Acme', '3454');
+accountMap.put('XYZ Corp', '5000');
+accountMap.put('ABC Company', '7500');
+
+#1 -
+Map<String, Object> objectMap = new Map<String, Object>();
+Object
+    String, Integer, Decimal, ApexClass, List, Map, Set
+    sObject
+        Standard Object
+        Custom Object
+
+ Map<String, List<String> > countryStateMap = new Map<String, List<String> >();
+
+============================================================ethods of Map in Salesforce
+
+// Country & their Currencies
+Map<String, String> countryMap = new Map<String, String>();
+countryMap.put('India', 'INR');
+countryMap.put('Japan', 'YEN');
+if( countryMap.containsKey('USA') == false ){
+    countryMap.put('USA', 'US Dollers');
+}else{
+    System.debug('Key already exisit in the Map');
+}
+System.debug(' countryMap '+ countryMap);
+String japanCurrency = countryMap.get('Japan'); // null
+System.debug(' japanCurrency \n '+ japanCurrency);
+
+Set<String> keys = countryMap.keySet();
+List<String> values = countryMap.values();
+System.debug(' keys \n '+ keys);
+System.debug(' values \n '+ values);
+
+// Country & their states (multiple values) - String, List<String>
+// Country - String
+// Map< String, List<String> >
+Map<String, List<String> > countryMap = new Map<String, List<String> >();
+List<String> indiaStates = new List<String>{'UP', 'Delhi', 'MP', 'MH', 'HYD'};
+countryMap.put('India', indiaStates);
+// 'India' = String
+// indiaStates - List<String>
+System.debug(' countryMap \n '+ countryMap);
+// containsKey, get
+// UK
+// Step 1 - Check if Country exists as a Map in Key
+// Step 2 - get the value from the map for that Country
+// Step 3 - Add the new value into the value from step 2
+// Step 4 - update the map
+// Step 5 - print the values
+
+if( countryMap.containsKey('India') ){ // Step 1
+    List<String> stateListTemp = countryMap.get('India'); // Step 2
+    // {'UP', 'Delhi', 'MP', 'MH', 'HYD'}
+    stateListTemp.add('UK'); // Step 3
+     // {'UP', 'Delhi', 'MP', 'MH', 'HYD', 'UK' }
+    countryMap.put('India', stateListTemp); // Step 4
+}
+System.debug(' stateListTemp \n '+ countryMap);
+
+if( countryMap.containsKey('USA') ){ // False
+    List<String> stateListTemp = countryMap.get('USA');
+    stateListTemp.add('Florida');
+    countryMap.put('USA', stateListTemp);
+} else {
+    List<String> stateListTemp = new List<String>();
+    stateListTemp.add('Miami');
+    countryMap.put('USA', stateListTemp);
+}
+System.debug(' countryMap \n '+ countryMap);
+// Key - { 'India', 'USA' }
+
+==============
