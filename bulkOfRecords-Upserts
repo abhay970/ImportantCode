@@ -1,0 +1,633 @@
+these code using for when insert/upsert bulk of records in objects fromm External System
+-------------------------------------------------------------------------------------
+And this Code used in Selha Client 
+------------------------------------------------------------------------------------
+public class PatientPharmacyDetailsHandler {
+    
+    public Static String patientBundleHandler(PharmacyBundleWrapper.BundleWrapper bundle , String PatientId){
+        String newMedBundle = 'No New Updates Available';
+        String IdentifierVal = '';
+        Savepoint sp = null;
+        try{
+            system.debug('bundle.entry.size>>'+bundle.entry.size());
+            List<PersonName> person = new List<PersonName>();
+            Map<String,String> practitionerMap = new Map<String,String>();
+            Map<String,Identifier> practitionerIdentifierMap = new Map<String,Identifier>();
+            //med start
+            Map<String,Medication> MedicationMap = new Map<String,Medication>();
+            Map<String,Identifier> medicationIdentifierMap = new Map<String,Identifier>();
+            Map<String,String> MedicationIdenValMap = new Map<String,String>();
+            //med stops
+            Map<String,MedicationRequest> MedicationRequestMap = new Map<String,MedicationRequest>();
+            Map<String,Identifier> MedicationRequestIdentifierMap = new Map<String,Identifier>();
+            Map<String,String> MedicationRequestCaneclledMap = new Map<String,String>();
+            Map<String,String> MedicReqUestPractitionerMap = new Map<String,String>();
+            Map<String,String> MedicationDispAndReqMap = new Map<String,String>(); //MedicationReqIdenValMap
+            Map<String,String> medicationReqIdMedicValMap = new Map <String,String>();
+            Map<String,PatientMedicationDosage> patientMedicationDosReqMap = new Map<String,PatientMedicationDosage>();
+            Map<String,Account> medDispenseLocationMap = new Map<String,Account>();
+            Map<String,Identifier> medDispLocationIdenMap = new Map<String,Identifier>();
+            Map<String,String> medDispLocationIdenValMap = new Map<String,String>();
+            Map<String,HealthcareFacility> locationCareFacilityMap = new Map<String,HealthcareFacility>();
+            Map<String,MedicationDispense> medicationDispenseMap = new Map<String,MedicationDispense>();
+            Map<String,Identifier> medicationDispenseIdentifierMap = new Map<String,Identifier>();
+            Map<String,String> medicationDispenseMedValMap = new Map<String,String>();
+            Map<String,Schema.location> facilityLocationMap = new Map<String,Schema.location>();
+            Map<String,String> medicationDispLocation = new Map<String,String>();
+            
+            system.debug('bundle>>'+bundle);
+            
+            if (bundle.entry.size() > 0) {
+                sp = Database.setSavepoint();
+                for(Integer i=0;i<bundle.entry.size();i++){
+                    
+                    PharmacyBundleWrapper.EntryWrapper entry = bundle.entry[i];
+                    system.debug('EntryWrapper>>'+entry);
+                    if(entry.resource != null){
+                        PharmacyBundleWrapper.ResourceWrapper resources = entry.resource;
+                        //Patient details inserted into PersonName object
+                        
+                        if(resources.resourceType == 'Patient'){
+                            system.debug('resources>>'+resources);
+                            PersonName pName = new PersonName();
+                            pName.FirstName = resources.names[0].given[0];
+                            pName.LastName = resources.names[0].family;
+                            pName.ParentRecordId = PatientId;
+                            pName.SourceSystem = 'Enterprise Rx';
+                            person.add(pName);
+                        }
+                    }
+                    if (entry.resourceList != null) {
+                        
+                        for (PharmacyBundleWrapper.ResourceWrapper resourceWrapper : entry.resourceList) {
+                            //IdentifierVal = resourceWrapper.id;
+                            system.debug('resourceWrapper>>'+resourceWrapper);
+                            
+                            system.debug('resources.resourceType>>'+resourceWrapper.resourceType);
+                            if(resourceWrapper.resourceType == 'Location'){
+                                system.debug('locationresources>>'+resourceWrapper);
+                                
+                                Account locationAcc = new Account();
+                                
+                                if (Test.isRunningTest()) {// theres a triger handler which is expecting account to be personAccount for test class adding this condition
+                                    locationAcc.LastName = resourceWrapper.name;
+                                    locationAcc.FirstName = resourceWrapper.name;
+                                    locationAcc.RecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByName().get('Person Account').getRecordTypeId();
+                                }else{
+                                    locationAcc.Name = resourceWrapper.name;
+                                }
+                                medDispenseLocationMap.put(resourceWrapper.id,locationAcc);
+                                
+                                Identifier locationMedDispIdentifier = new Identifier();
+                                locationMedDispIdentifier.IdValue = resourceWrapper.id;
+                                locationMedDispIdentifier.SourceSystem = 'Enterprise Rx';
+                                medDispLocationIdenMap.put(resourceWrapper.id,locationMedDispIdentifier);
+                                //medDispLocationIdenValMap.put(resourceWrapper.id,resourceWrapper.id);
+                                
+                                Schema.location facilityLocation = new Schema.location();
+                                facilityLocation.Name = resourceWrapper.id;
+                                facilityLocation.LocationType = 'pharmacy';
+                                facilityLocationMap.put(resourceWrapper.id,facilityLocation);
+                                
+                                HealthcareFacility Facilitylocations = new HealthcareFacility();
+                                Facilitylocations.Name = resourceWrapper.name;
+                                locationCareFacilityMap.put(resourceWrapper.id,Facilitylocations);
+                            }
+                            //Practioner Mapping
+                            if(resourceWrapper.resourceType == 'Practitioner'){
+                                String rquester = resourceWrapper.display;
+                                String rquesterWithoutSpaces = rquester.replaceAll('\\s', '');
+                                practitionerMap.put(resourceWrapper.identifier[0].value,rquesterWithoutSpaces);
+                                
+                                Identifier practitionerIdentifier = new Identifier();
+                                practitionerIdentifier.IdValue = resourceWrapper.identifier[0].value;
+                                practitionerIdentifier.SourceSystem = 'Enterprise Rx';
+                                practitionerIdentifierMap.put(resourceWrapper.identifier[0].value,practitionerIdentifier);
+                                
+                            }
+                            //Medication details Mapping
+                            if(resourceWrapper.resourceType == 'Medication'){
+                                Medication med = new Medication();
+                                med.Name = resourceWrapper.code.text;
+                                med.Status = resourceWrapper.status;
+                                MedicationMap.put(resourceWrapper.identifier[0].id,med);
+                                //MedicationMap.put(resourceWrapper.id,med);
+                                
+                                Identifier medIdentifier = new Identifier();
+                                medIdentifier.IdValue = resourceWrapper.identifier[0].id;
+                                medIdentifier.SourceSystem = 'Enterprise Rx';
+                                medicationIdentifierMap.put(resourceWrapper.identifier[0].id,medIdentifier);
+                                
+                                //MedicationIdenValMap.put(resourceWrapper.identifier[0].id,resourceWrapper.identifier[0].id);
+                            }
+                            //Medication Request details Mapping
+                            if(resourceWrapper.resourceType == 'MedicationRequest'){
+                                system.debug('resourceWrapper medReq>>'+resourceWrapper);
+                                MedicationRequest medicReq = new MedicationRequest();
+                                if(resourceWrapper.status == null){
+                                    medicReq.Status = 'null';
+                                }
+                                else{
+                                    medicReq.Status = resourceWrapper.status;
+                                }
+                                medicReq.RefillsAllowed = Integer.valueOf(resourceWrapper.dispenseRequest.numberOfRepeatsAllowed);
+                                medicReq.PatientId = patientId;
+                                String val = resourceWrapper.authoredOn+'T00:00:00-10:00';
+                                DateTime date1 = (DateTime)Json.deserialize('"'+val+'"', DateTime.class);
+                                System.debug(date1);
+                                medicReq.PrescribedDate = date1;//Date.ValueOf(resourceWrapper.authoredOn);
+                                medicReq.Type = resourceWrapper.intent;
+                                MedicationRequestMap.put(resourceWrapper.id,medicReq);
+                                medicationReqIdMedicValMap.put(resourceWrapper.id,resourceWrapper.contained[0].code.coding[0].code);
+                                Identifier medReqIdentifier = new Identifier();
+                                medReqIdentifier.IdValue = resourceWrapper.id;
+                                medReqIdentifier.SourceSystem = 'Enterprise Rx';
+                                MedicationRequestIdentifierMap.put(resourceWrapper.id,medReqIdentifier);
+                                MedicationRequestCaneclledMap.put(resourceWrapper.id,resourceWrapper.id);
+                                PatientMedicationDosage patientDosage = new PatientMedicationDosage();
+                                patientDosage.PatientInstruction = resourceWrapper.dosageInstruction[0].text;
+                                patientMedicationDosReqMap.put(resourceWrapper.id,patientDosage);
+                                System.debug('patientMedicationDosReqMap>>'+patientMedicationDosReqMap);
+                                Pattern pattern = Pattern.compile('Practitioner/practitioner(\\d+)');
+                                if(resourceWrapper.requester != null){
+                                    Matcher matcher = pattern.matcher(resourceWrapper.requester.agent.reference);
+                                    system.debug('matcher>>'+matcher);
+                                    String extractedNumber = '';
+                                    if (matcher.find()) {
+                                        extractedNumber = matcher.group(1);
+                                    }
+                                    system.debug('extractedNumber>>'+extractedNumber);
+                                    MedicReqUestPractitionerMap.put(resourceWrapper.id,extractedNumber);
+                                }
+                            }
+                            //Medication Dispense details Mapping
+                            if(resourceWrapper.resourceType == 'MedicationDispense'){
+                                String inputString = resourceWrapper.destination.location.reference;
+                                List<String> parts = inputString.split('/');
+                                String result = parts.size() > 1 ? parts[1] : '';
+                                String medReference = resourceWrapper.authorizingPrescription[0].reference;
+                                List<String> splitParts = medReference.split('/');
+                                String medicationReqId = splitParts[1];
+                                MedicationDispense medDispense = new MedicationDispense();
+                                medDispense.PatientId = PatientId;
+                                if(resourceWrapper.status == null){
+                                    medDispense.Status = 'null';
+                                }else{
+                                    medDispense.Status = resourceWrapper.status;
+                                }
+                                if(resourceWrapper.extension.size() > 0){
+                                    for(PharmacyBundleWrapper.DispenseExtensionWrapper ext:resourceWrapper.extension){
+                                        String urlString = ext.url;
+                                        String fragment = urlString.substringAfter('#');
+                                        if(fragment == 'deliveryMethod'){
+                                            medDispense.Delivery_Method__c = ext.valueString;
+                                        }
+                                        if(fragment == 'lastFillStatus'){
+                                            medDispense.Last_Fill_Status__c = ext.valueString;
+                                        }
+                                    }
+                                }
+                                //medDispense.Delivery_Method__c = resourceWrapper.extension[0].valueString;
+                                medicationDispenseMap.put(resourceWrapper.id,medDispense);
+                                Identifier medDispIdentifier = new Identifier();
+                                medDispIdentifier.IdValue = medicationReqId;
+                                medDispIdentifier.SourceSystem = 'Enterprise Rx';
+                                medicationDispenseIdentifierMap.put(resourceWrapper.id,medDispIdentifier);
+                                medicationDispenseMedValMap.put(resourceWrapper.id,resourceWrapper.contained[0].code.coding[0].code);
+                                medicationDispLocation.put(resourceWrapper.id,result);
+                                MedicationDispAndReqMap.put(resourceWrapper.id,medicationReqId);
+                            }
+                            System.debug('Resource ID: ' + IdentifierVal);
+                        }
+                    }
+                }
+                system.debug('medDispenseLocationMap>>'+medDispenseLocationMap);
+                /**New Flow starts here**/
+                /**Practitioner flow starts **/
+                List<HealthcareProvider> existingPractitionerSF = [
+                    SELECT Id,Name,
+                    (SELECT IdValue, ParentRecordId, SourceSystem FROM Identifiers WHERE IdValue IN: practitionerIdentifierMap.keySet())
+                    FROM HealthcareProvider
+                    WHERE Id IN (SELECT ParentRecordId FROM Identifier WHERE IdValue IN: practitionerIdentifierMap.keySet())
+                ];
+                Map<String, Contact> practitionerDetailsMap = new Map<string, Contact>();
+                Map<String, HealthcareProvider> practitionerProviderMap = new Map<string, HealthcareProvider>();
+                Boolean newPractitioner = false;
+                //System.debug('practitionerMap>>'+practitionerMap);
+                Boolean conditionSatisfied = false;
+                for(String prctId: practitionerMap.keySet()){
+                    boolean foundMatch = false;
+                    if(existingPractitionerSF.size() > 0){
+                        for (HealthcareProvider exProviders : existingPractitionerSF) {
+                            List<Identifier> identifiers = exProviders.Identifiers;
+                            for(Identifier identifier : identifiers) {
+                                system.debug('prctId>> inside iden for'+prctId);
+                                system.debug('identifier.IdValue>>'+identifier.IdValue);
+                                if(prctId == identifier.IdValue){
+                                    system.debug('prctId>>'+prctId);
+                                    system.debug('identifier.IdValue>>'+identifier.IdValue);
+                                    practitionerIdentifierMap.remove(prctId);
+                                    practitionerProviderMap.put(prctId,exProviders);
+                                    System.debug('practitionerProviderMap2>>'+practitionerProviderMap);
+                                    system.debug('prctId2>>'+prctId);
+                                    system.debug('identifier.IdValue2>>'+identifier.IdValue);
+                                    foundMatch = true;
+                                    break;
+                                }/*else{
+                                    system.debug('inside else');
+                                    String practName = practitionerMap.get(prctId);
+                                    List<String> fieldValues = practName.split(',');
+                                    Account practitioner = new Account();
+                                    practitioner.FirstName = fieldValues[0];
+                                    practitioner.LastName = fieldValues[1];
+                                    practitioner.RecordTypeId = Schema.SObjectType.Account.getRecordTypeInfosByDeveloperName().get('PersonAccount').getRecordTypeId();
+                                    practitionerDetailsMap.put(prctId,practitioner);
+                                    
+                                    HealthcareProvider practitionerProviders = new HealthcareProvider();
+                                    practitionerProviders.Name = fieldValues[0] +' '+fieldValues[1];
+                                    practitionerProviderMap.put(prctId,practitionerProviders);
+                                }*/
+                            }
+                            if (foundMatch) {
+                                // exit outer loop if a match is found
+                                break;
+                            }
+                        }
+                    } if (!foundMatch) {
+                        newPractitioner = true;
+                        String practName = practitionerMap.get(prctId);
+                        List<String> fieldValues = practName.split(',');
+                        contact practitioner = new contact();
+                        practitioner.FirstName = fieldValues[0];
+                        practitioner.LastName = fieldValues[1];
+                        if (Test.isRunningTest()) {
+                            practitioner.RecordTypeId = Schema.SObjectType.Contact.getRecordTypeInfosByName().get('Business').getRecordTypeId();
+                        }
+                        practitionerDetailsMap.put(prctId,practitioner);
+                        
+                        HealthcareProvider practitionerProviders = new HealthcareProvider();
+                        practitionerProviders.Name = fieldValues[0] +' '+fieldValues[1];
+                        practitionerProviderMap.put(prctId,practitionerProviders);
+                    }
+                }
+                system.debug('practitionerDetailsMap>>'+practitionerDetailsMap);
+                if(newPractitioner && !practitionerDetailsMap.isEmpty()){
+                    insert practitionerDetailsMap.values();
+                    for(String prctKey: practitionerProviderMap.keySet()){
+                        HealthcareProvider prov = practitionerProviderMap.get(prctKey);
+                        if(practitionerDetailsMap.containsKey(prctKey)){
+                            prov.PractitionerId = practitionerDetailsMap.get(prctKey).Id;
+                        }
+                    }
+                    upsert practitionerProviderMap.values();
+                    
+                    if(!practitionerIdentifierMap.isEmpty()){
+                        for(String idKey: practitionerIdentifierMap.keySet()){
+                            Identifier practIdentifier = practitionerIdentifierMap.get(idKey);
+                            practIdentifier.ParentRecordId = practitionerProviderMap.get(idKey).Id;
+                        }
+                        insert practitionerIdentifierMap.values();
+                    }
+                }
+                if(!newPractitioner && !practitionerDetailsMap.isEmpty()){
+                    upsert practitionerDetailsMap.values();
+                    for(String prctKey: practitionerProviderMap.keySet()){
+                        system.debug('practitionerProviderMap>>'+practitionerProviderMap);
+                        HealthcareProvider prov = practitionerProviderMap.get(prctKey);
+                        system.debug('practitionerDetailsMap>>'+practitionerDetailsMap);
+                        System.debug('prctKey>>'+prctKey);
+                        if(practitionerDetailsMap.containsKey(prctKey)){
+                            prov.PractitionerId = practitionerDetailsMap.get(prctKey).Id;
+                        }
+                    }
+                    system.debug('practitionerProviderMap>>'+practitionerProviderMap);
+                    upsert practitionerProviderMap.values();
+                    
+                    if(!practitionerIdentifierMap.isEmpty()){
+                        for(String idKey: practitionerIdentifierMap.keySet()){
+                            Identifier practIdentifier = practitionerIdentifierMap.get(idKey);
+                            practIdentifier.ParentRecordId = practitionerProviderMap.get(idKey).Id;
+                        }
+                        insert practitionerIdentifierMap.values();
+                    }
+                }
+                /**Practitioner flow ends **/
+
+
+
+                
+                /**Medication Flow Starts**/
+                List<Medication> existingmedicationSF = [
+                    SELECT Id, Status,
+                    (SELECT IdValue, ParentRecordId, SourceSystem FROM Identifiers WHERE IdValue IN: medicationIdentifierMap.keySet())
+                    FROM Medication
+                    WHERE Id IN (SELECT ParentRecordId FROM Identifier WHERE IdValue IN: medicationIdentifierMap.keySet())
+                ];
+                Boolean newMedicationFound = true;
+                for(String medKey: MedicationMap.keySet()){
+                    if(existingmedicationSF.size() > 0){
+                        for(Medication medications: existingmedicationSF){
+                            List<Identifier> identifiers = medications.Identifiers;
+                            for(Identifier identifier : identifiers) {
+                                //String medIdKey = MedicationIdenValMap.get(medKey);
+                                if(medKey == identifier.IdValue){
+                                    newMedicationFound = false;
+                                    Medications.Name = MedicationMap.get(medKey).Name;
+                                    Medications.Status = MedicationMap.get(medKey).Status;
+                                    //medicationsMap.put(identifier.IdValue,Medications);
+                                    MedicationMap.remove(medKey);
+                                    MedicationMap.put(medKey,Medications);
+                                    medicationIdentifierMap.remove(medKey);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if(!newMedicationFound){
+                    upsert MedicationMap.values();
+                    newMedBundle='Medication Updated';
+                    for(String medIdKey: medicationIdentifierMap.keySet()){
+                        Identifier medIdent = medicationIdentifierMap.get(medIdKey);
+                        medIdent.ParentRecordId = MedicationMap.get(medIdKey).Id;
+                    }
+                    insert medicationIdentifierMap.values();
+                }else{
+                    insert MedicationMap.values();
+                    newMedBundle='Medication Updated';
+                    for(String medIdKey: medicationIdentifierMap.keySet()){
+                        Identifier medIdent = medicationIdentifierMap.get(medIdKey);
+                        medIdent.ParentRecordId = MedicationMap.get(medIdKey).Id;
+                    }
+                    
+                    insert medicationIdentifierMap.values();
+                }
+                system.debug('MedicationMap>>'+MedicationMap);
+                /**Medication Flow ends**/
+                /**Medication request Flow start**/
+                map<String,String> cancelledmedReqIds  = new map<String,String>();
+                List<MedicationRequest> existingmedicationRequestSF = [
+                    SELECT Id, Status,PatientId,RefillsAllowed,PrescribedDate,Type,medicationId,medication.name,
+                    (SELECT IdValue, ParentRecordId, SourceSystem FROM Identifiers)
+                    FROM MedicationRequest
+                    WHERE PatientId=:PatientId
+                ];
+                system.debug('existingmedicationRequestSF>>'+existingmedicationRequestSF);
+                Boolean newMedicationReq = false;
+                map<String,MedicationRequest> cancelledMedreqs = new map<String,MedicationRequest>();
+                for(String medReqKey: MedicationRequestMap.keySet()){
+                    boolean foundMatch = false;
+                    system.debug('first loop>>');
+                    if(existingmedicationRequestSF.size() > 0 ){
+                        system.debug('existingmedicationRequestSF.size()>>'+existingmedicationRequestSF.size());
+                        // system.debug('MedicationReqIdenValMap.get(medReqKey)>'+MedicationReqIdenValMap.get(medReqKey));
+                        for(MedicationRequest mediRequests: existingmedicationRequestSF){
+                            List<Identifier> identifiers = mediRequests.Identifiers;
+                            for(Identifier identifier : identifiers) {
+                                //String medReqIdKey = MedicationReqIdenValMap.get(medReqKey);
+                                
+                                if(medReqKey == identifier.IdValue){
+                                    System.debug('inside if medReqKey>>'+medReqKey+'<<identifier.IdValue>>'+identifier.IdValue);
+                                    MedicationRequestIdentifierMap.remove(medReqKey);
+                                    mediRequests.Status =MedicationRequestMap.get(medReqKey).Status;
+                                    mediRequests.RefillsAllowed = MedicationRequestMap.get(medReqKey).RefillsAllowed;
+                                    mediRequests.PrescribedDate = MedicationRequestMap.get(medReqKey).PrescribedDate;
+                                    mediRequests.Type = MedicationRequestMap.get(medReqKey).Type;
+                                    MedicationRequestMap.remove(medReqKey);
+                                    MedicationRequestMap.put(medReqKey,mediRequests);
+                                    patientMedicationDosReqMap.remove(medReqKey);
+                                    //MedicReqUestPractitionerMap.remove(medReqKey);
+                                    foundMatch = true;
+                                    break;
+                                }
+                                
+                            }
+                            if(foundMatch){
+                                system.debug('break out of loop inner>>');
+                                break;
+                            }
+                        }
+                    }
+                    if(!foundMatch){
+                        newMedicationReq = true;
+                        system.debug('medReqKey>>'+medReqKey);
+                        system.debug('MedicationRequestMap>>'+MedicationMap);
+                        MedicationRequest medReq= MedicationRequestMap.get(medReqKey);
+                        String medicationKey = medicationReqIdMedicValMap.get(medReqKey);
+                        medReq.MedicationId = MedicationMap.get(medicationKey).Id;
+                        if(MedicReqUestPractitionerMap.containsKey(medReqKey)){
+                            String practKey = MedicReqUestPractitionerMap.get(medReqKey);
+                            //system.debug('practitionerProviderMap>>'+practitionerProviderMap);
+                            medReq.RequesterId = practitionerProviderMap.get(practKey).Id;
+                        }
+                    }
+                }
+                
+                if(existingmedicationRequestSF.size() > 0 ){
+                    for(MedicationRequest mediRequests: existingmedicationRequestSF){
+                        List<Identifier> identifiers = mediRequests.Identifiers;
+                        for(Identifier identifier : identifiers) {
+                            if(!MedicationRequestCaneclledMap.containskey(identifier.IdValue)){
+                                system.debug('inside this>>');
+                                system.debug('identifier.IdValue>>'+identifier.IdValue);
+                                system.debug('mediRequestss>>'+mediRequests.medication.name);
+                                MedicationRequestCaneclledMap.put(identifier.IdValue,identifier.IdValue);
+                                mediRequests.Status = 'Cancelled';
+                                cancelledMedreqs.put(identifier.IdValue,mediRequests);
+                                cancelledmedReqIds.put(mediRequests.Id,mediRequests.Id);
+                                system.debug('cancelledMedreqs>>'+cancelledMedreqs);
+                                //foundMatch = true;
+                                //break;
+                            }
+                        }
+                    }
+                }
+                // if(newMedicationReq && !MedicationRequestMap.isEmpty()){
+                    //     insert MedicationRequestMap.values();
+                // }
+                
+                if(!MedicationRequestMap.isEmpty()){
+                    system.debug('MedicationRequestMap>>'+MedicationRequestMap);
+                    upsert MedicationRequestMap.values();
+                    newMedBundle='Medication Updated';
+                }
+                
+                System.debug('cancelledMedreqs>>'+cancelledMedreqs);
+                if(!cancelledMedreqs.isEmpty()){
+                    update cancelledMedreqs.values();
+                }
+                
+                if(!MedicationRequestMap.isEmpty()){
+                    if(!MedicationRequestIdentifierMap.isEmpty()){
+                        for(String medReqIden: MedicationRequestIdentifierMap.keySet()){
+                            Identifier medRequestIden = MedicationRequestIdentifierMap.get(medReqIden);
+                            medRequestIden.ParentRecordId = MedicationRequestMap.get(medReqIden).Id;
+                        }
+                        insert MedicationRequestIdentifierMap.values();
+                        for(String patientDosKey:patientMedicationDosReqMap.keySet()){
+                            PatientMedicationDosage medDos = patientMedicationDosReqMap.get(patientDosKey);
+                            medDos.ParentRecordId = MedicationRequestMap.get(patientDosKey).Id;
+                        }
+                        insert patientMedicationDosReqMap.values();
+                    }
+                }
+                
+                /**Medication request Flow ends**/
+                
+                /**Medication Dispnse Flow starts**/
+                List<HealthcareFacility> existingLocationAccSF = [
+                    SELECT Id,Name,
+                    (SELECT IdValue, ParentRecordId, SourceSystem FROM Identifiers WHERE IdValue IN: medDispLocationIdenMap.keySet())
+                    FROM HealthcareFacility
+                    WHERE Id IN (SELECT ParentRecordId FROM Identifier WHERE IdValue IN: medDispLocationIdenMap.keySet())
+                ];
+                system.debug('medDispenseLocationMap>>'+medDispenseLocationMap);
+                for(String locationKey:medDispenseLocationMap.keySet()){
+                    if(existingLocationAccSF.size() > 0){
+                        for(HealthcareFacility locAcc: existingLocationAccSF){
+                            List<Identifier> identifiers = locAcc.Identifiers;
+                            for(Identifier identifier : identifiers) {
+                                //String locIdenKey = medDispLocationIdenValMap.get(locationKey);
+                                if(locationKey == identifier.IdValue){
+                                    medDispenseLocationMap.remove(locationKey);
+                                    medDispLocationIdenMap.remove(locationKey);
+                                    locationCareFacilityMap.remove(locationKey);
+                                    locationCareFacilityMap.put(locationKey,locAcc);
+                                    facilityLocationMap.remove(locationKey);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                    }
+                }
+                if(!medDispenseLocationMap.isEmpty()){
+                    insert medDispenseLocationMap.values();
+                    
+                    insert facilityLocationMap.values();
+                    Map<String,Location> locationFacilityMap = new Map<String,Location>();
+                    for(String carFaciKey: locationCareFacilityMap.keySet()){
+                        HealthcareFacility hcFacility = locationCareFacilityMap.get(carFaciKey);
+                        system.debug('locationCareFacilityMap>>'+locationCareFacilityMap);
+                        system.debug('medDispenseLocationMap>>'+medDispenseLocationMap);
+                        system.debug('carFaciKey>>'+carFaciKey);
+                        if(medDispenseLocationMap.containsKey(carFaciKey)){
+                            hcFacility.AccountId = medDispenseLocationMap.get(carFaciKey).Id;
+                        }
+                        if(facilityLocationMap.containsKey(carFaciKey)){
+                            hcFacility.LocationId = facilityLocationMap.get(carFaciKey).Id;
+                        }
+                        
+                    }
+                    upsert locationCareFacilityMap.values();
+                    
+                    for(String idenKey: medDispLocationIdenMap.keySet()){
+                        Identifier locIden = medDispLocationIdenMap.get(idenKey);
+                        locIden.ParentRecordId = locationCareFacilityMap.get(idenKey).Id;
+                    }
+                    insert medDispLocationIdenMap.values();
+                    
+                }
+                
+                List<MedicationDispense> existingmedDispenseSF = [
+                    SELECT Id, Status,PatientId,Delivery_Method__c,Last_Fill_Status__c,
+                    (SELECT IdValue, ParentRecordId, SourceSystem FROM Identifiers WHERE IdValue IN: medicationDispenseIdentifierMap.keySet())
+                    FROM MedicationDispense
+                    WHERE Id IN (SELECT ParentRecordId FROM Identifier WHERE IdValue IN: medicationDispenseIdentifierMap.keySet()) AND PatientId=:PatientId
+                ];
+                Boolean newMedDispnse = false;
+                system.debug('medicationDispenseMap>>'+medicationDispenseMap);
+                for(String medDispKey: medicationDispenseMap.keySet()){
+                    boolean foundMatch = false;
+                    if(existingmedDispenseSF.size() > 0){
+                        for(MedicationDispense dispensed: existingmedDispenseSF){
+                            List<Identifier> identifiers = dispensed.Identifiers;
+                            for(Identifier identifier : identifiers) {
+                                //String despIden = medicationDispenseIdenValMap.get(medDispKey);
+                                //system.debug('medDispKey>'+medDispKey+'<>'+'identifier.IdValue'+identifier.IdValue);
+                                if(medDispKey == identifier.IdValue){
+                                    MedicationDispense medsDisp = medicationDispenseMap.get(medDispKey);
+                                    system.debug('existing medsDisp>>'+medsDisp);
+                                    dispensed.Status = medsDisp.Status;
+                                    dispensed.Delivery_Method__c = medsDisp.Delivery_Method__c;
+                                    dispensed.Last_Fill_Status__c = medsDisp.Last_Fill_Status__c;
+                                    medicationDispenseMap.remove(medDispKey);
+                                    medicationDispenseMap.put(medDispKey,dispensed);
+                                    medicationDispenseIdentifierMap.remove(medDispKey);
+                                    foundMatch = true;
+                                    break;
+                                }
+                                
+                            }
+                            if(foundMatch){
+                                break;
+                            }
+                        }
+                    }
+                    if(!foundMatch){
+                        newMedDispnse = true;
+                        MedicationDispense medDisp = medicationDispenseMap.get(medDispKey);
+                        system.debug('MedicationRequestMap>>'+MedicationRequestMap);
+                        
+                        String medreqKey = MedicationDispAndReqMap.get(medDispKey);
+                        system.debug('medDispKey>>'+medDispKey+'<>>'+'medreqKey>>'+medreqKey);
+                        String medKey = medicationDispenseMedValMap.get(medDispKey);
+                        if(MedicationMap.containsKey(medKey)){
+                            medDisp.PrimaryMedicationRequestId = MedicationRequestMap.get(medreqKey).Id;
+                            medDisp.MedicationId = MedicationMap.get(medKey).Id;
+                            String locKey = medicationDispLocation.get(medDispKey);
+                            medDisp.HealthcareFacilityId = locationCareFacilityMap.get(locKey).Id;
+                        }else{
+                            medicationDispenseMap.remove(medDispKey);
+                            medicationDispenseIdentifierMap.remove(medDispKey);
+                        }
+                    }
+                }
+                
+                // if(newMedDispnse){
+                    //     insert medicationDispenseMap.values();
+                    //     /*for(String dispIdenkey: medicationDispenseIdentifierMap.keySet()){
+                        //         Identifier dispIden = medicationDispenseIdentifierMap.get(dispIdenkey);
+                        //         dispIden.ParentRecordId = medicationDispenseMap.get(dispIdenkey).Id;
+                    //     }
+                    //     insert medicationDispenseIdentifierMap.values();*/
+                // } else{
+                    
+                    if(!medicationDispenseMap.isEmpty()){
+                        system.debug('medicationDispenseMap upsert>>'+medicationDispenseMap);
+                        upsert medicationDispenseMap.values();
+                        newMedBundle='Medication Updated';
+                    }
+                    
+                    if(!cancelledmedReqIds.isEmpty()){
+                        List<MedicationDispense> cancellmedDispense = [SELECT Id,PrimaryMedicationRequestId from MedicationDispense where PrimaryMedicationRequestId IN:cancelledmedReqIds.values()];
+                        update cancellmedDispense;
+                    }
+                    
+                    if(!medicationDispenseIdentifierMap.isEmpty() && !medicationDispenseMap.isEmpty()){
+                        for(String dispIdenkey: medicationDispenseIdentifierMap.keySet()){
+                            Identifier dispIden = medicationDispenseIdentifierMap.get(dispIdenkey);
+                            dispIden.ParentRecordId = medicationDispenseMap.get(dispIdenkey).Id;
+                        }
+                        insert medicationDispenseIdentifierMap.values();
+                    }
+                    /**Medication Dispnse Flow ends**/
+                    /**New Flow ends here**/
+                    
+                    //Location details insertion ends
+                    List<PersonName> personsObj = [select FirstName,LastName,ParentRecordId from PersonName where ParentRecordId=:PatientId];
+                    if(personsObj.isEmpty()){
+                        insert person; //personName object insertion
+                    }
+                    
+                }
+            }
+            catch(exception ex){
+                newMedBundle = 'Medication Details Retrieval Failed';
+                Database.rollback(sp);
+                system.debug('exception occured>>'+ex);
+                
+            }
+            return newMedBundle;
+        }
+    }
