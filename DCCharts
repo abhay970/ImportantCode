@@ -1,0 +1,335 @@
+public class DataCloudService2 {
+    public static Map<String,Object> queryDataCloud2(String accessTokens, String input) {
+        String data5=(String)queryJsonPatient(accessTokens , input);
+        // List<Object> data4=(List<Object>)queryJsonMedRequest(accessTokens , input);
+        // ===============
+        Map<String,Object> dataMap=(Map<String,Object>)queryJsonMedRequest(accessTokens , input);
+        List<Object> data4=(List<Object>)dataMap.get('data');
+        List<String> medReqIdLst=(List<String>)dataMap.get('medReqIdLst');
+        // ===============
+        List<Object> data2=(List<Object>)queryJsonMedication(accessTokens, input,medReqIdLst);
+        List<Object> data3=(List<Object>)queryJsonPractioner(accessTokens, input,medReqIdLst);
+        // Map<String,Object>  data=new Map<String,Object>{'data2'=>data2,'data3'=>data3,'patName'=>data5 };
+        Map<String,Object>  data=new Map<String,Object>{'data2'=>data2,'data3'=>data3,'data4'=>data4,'patName'=>data5 };
+        return data;
+    }
+    public static List<Object> queryJsonMedication(String accessTokens, String input, List<String> medReqIdLst) {
+        // System.debug('queryJsonMedication========>' + medReqIdLst);
+        System.debug('Number of Medication Request IDs: ' + medReqIdLst.size());
+    System.debug('Medication Request IDs List: ' + medReqIdLst);
+        
+        // Convert the list of IDs into a comma-separated string with single quotes
+        String medReqIdStr = '';
+        for (String id : medReqIdLst) {
+            medReqIdStr += '\'' + id + '\',';
+        }
+        // Remove the trailing comma
+        medReqIdStr = medReqIdStr.removeEnd(',');
+        
+        // Construct the query JSON with the dynamically built WHERE clause
+        String queryJson2 = '{"sql" : "SELECT Epic_Epic_MedicationRequest_Med_2108560C__dll.display__c, ' +
+                            'Epic_Epic_MedicationRequest_Med_2108560C__dll.DataSourceObject__c, ' +
+                            'Epic_Epic_MedicationRequest_Med_2108560C__dll.Medication_Id__c, ' +
+                            'Epic_Epic_MedicationRequest_Med_2108560C__dll.DataSource__c, ' +
+                            'Epic_Epic_MedicationRequest_Med_2108560C__dll.Epic_MedicationRequesId__c, ' +
+                            'Epic_Epic_MedicationRequest_Med_2108560C__dll.id__c ' +
+                            'FROM Epic_Epic_MedicationRequest_Med_2108560C__dll ' +
+                            'WHERE Epic_MedicationRequesId__c IN (' + medReqIdStr + ')"}';
+    
+        // Set up the HTTP request
+        String endpoint = 'https://g83g8m3fmftd8y30g5tdkzddh1.c360a.salesforce.com/api/v1/query';
+        String accessToken = accessTokens;
+    
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpoint);
+        req.setMethod('POST');
+        req.setHeader('Authorization', 'Bearer ' + accessToken);
+        req.setHeader('Content-Type', 'application/json');
+        req.setBody(queryJson2);
+    
+        Http http = new Http();
+        HTTPResponse res = http.send(req);
+    
+        if (res.getStatusCode() == 200) {
+            String responseBody = res.getBody();
+            Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
+            List<Object> data = (List<Object>)responseMap.get('data');
+            System.debug('queryJsonMedication Response: ' + data);
+            return data;
+        } else {
+            System.debug('Error: ' + res.getStatusCode() + ' ' + res.getStatus());
+            System.debug('Error Body: ' + res.getBody());
+            return null;
+        }
+    }
+    
+ public static List<Object> queryJsonPractioner(String accessTokens, String input, List<String> medReqIdLst) {
+        // Debug statement to see the number of IDs
+        System.debug('Number of Practitioner: ' + medReqIdLst.size());
+        System.debug('Medication Request IDs List of Practitioner: ' + medReqIdLst);
+        String medReqIdStr = '';
+        for (String id : medReqIdLst) {
+            medReqIdStr += '\'' + id + '\',';
+        }
+        medReqIdStr = medReqIdStr.removeEnd(',');
+        String queryJson3 = '{"sql" : "SELECT Epic_Epic_MedicationRequestPrac_21084775__dll.DataSource__c, ' +
+                            'Epic_Epic_MedicationRequestPrac_21084775__dll.DataSourceObject__c, ' +
+                            'Epic_Epic_MedicationRequestPrac_21084775__dll.Practitioner_Id__c, ' +
+                            'Epic_Epic_MedicationRequestPrac_21084775__dll.display__c, ' +
+                            'Epic_Epic_MedicationRequestPrac_21084775__dll.Epic_MedicationRequestId__c, ' +
+                            'Epic_Epic_MedicationRequestPrac_21084775__dll.Id__c, ' +
+                            'Epic_Epic_MedicationRequestPrac_21084775__dll.Practitioner_Type__c ' +
+                            'FROM Epic_Epic_MedicationRequestPrac_21084775__dll ' +
+                            'WHERE Epic_MedicationRequestId__c IN (' + medReqIdStr + ')"}';
+        System.debug('Constructed Practitioner Query JSON: ' + queryJson3);
+        String endpoint = 'https://g83g8m3fmftd8y30g5tdkzddh1.c360a.salesforce.com/api/v1/query';
+        String accessToken = accessTokens;
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpoint);
+        req.setMethod('POST');
+        req.setHeader('Authorization', 'Bearer ' + accessToken);
+        req.setHeader('Content-Type', 'application/json');
+        req.setBody(queryJson3);
+        Http http = new Http();
+        HTTPResponse res = http.send(req);
+        if (res.getStatusCode() == 200) {
+            String responseBody = res.getBody();
+            System.debug('Practitioner Response: ' + responseBody);
+            Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
+            List<Object> data = (List<Object>)responseMap.get('data');
+            return data;
+        } else {
+            System.debug('Error 3: ' + res.getStatusCode() + ' ' + res.getStatus());
+            System.debug('Error Body: ' + res.getBody());
+            return null;
+        }
+    }
+    
+    // public static List<Object> queryJsonMedRequest(String accessTokens, String input){
+    public static Map<String,Object> queryJsonMedRequest(String accessTokens, String input){
+        String endpoint = 'https://g83g8m3fmftd8y30g5tdkzddh1.c360a.salesforce.com/api/v1/query';
+        String accessToken = accessTokens;
+        String patientId = input;
+        String queryJson4 = '{"sql" : "SELECT Epic_MedicationRequest_210BABDC__dll.category__c, Epic_MedicationRequest_210BABDC__dll.codeSet__c, Epic_MedicationRequest_210BABDC__dll.courseOfTherapyType__c,Epic_MedicationRequest_210BABDC__dll.id__c, Epic_MedicationRequest_210BABDC__dll.identifier__c, Epic_MedicationRequest_210BABDC__dll.intent__c, Epic_MedicationRequest_210BABDC__dll.medication__c, Epic_MedicationRequest_210BABDC__dll.PatientId__c, Epic_MedicationRequest_210BABDC__dll.Practitioner__c, Epic_MedicationRequest_210BABDC__dll.status__c FROM Epic_MedicationRequest_210BABDC__dll WHERE PatientId__c = \'' + patientId + '\'" }';
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpoint);
+        req.setMethod('POST');
+        req.setHeader('Authorization', 'Bearer ' + accessToken);
+        req.setHeader('Content-Type', 'application/json');
+        req.setBody(queryJson4);
+        Http http = new Http();
+        HTTPResponse res = http.send(req);
+        if (res.getStatusCode() == 200) {
+            String responseBody = res.getBody();
+            System.debug(' MR>> '+responseBody);
+            Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
+            List<Object> data=(List<Object>)responseMap.get('data');
+            // --------------------
+            List<String> idList = new List<String>();
+            for (Object item : data) {
+                Map<String, Object> itm=(Map<String, Object>)item;
+                idList.add((String) itm.get('id__c'));
+            }
+            Map<String,Object> dataMap=new Map<String, Object>();
+            dataMap.put('data',data);  
+            dataMap.put('medReqIdLst',idList);
+            return dataMap;
+            // --------------------
+            // return data;
+        } else {
+            System.debug('Error 4: ' + res.getStatusCode() + ' ' + res.getStatus());
+            System.debug('Error Body: ' + res.getBody());
+            System.debug('queryJson4 BdbdbdbD: '+ 'Error');
+            return null;
+        }
+    }
+    public static String queryJsonPatient(String accessTokens, String input) {
+        String endpoint = 'https://g83g8m3fmftd8y30g5tdkzddh1.c360a.salesforce.com/api/v1/query';
+        String accessToken = accessTokens;
+        String patientId = input;
+        String queryJson5 = '{"sql" : "SELECT firstName__c, lastName__c FROM HCDC_Patient_0C32474E__dll WHERE id__c = \'' + patientId + '\'" }';
+        
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpoint);
+        req.setMethod('POST');
+        req.setHeader('Authorization', 'Bearer ' + accessToken);
+        req.setHeader('Content-Type', 'application/json');
+        req.setBody(queryJson5);
+        
+        Http http = new Http();
+        HTTPResponse res = http.send(req);
+        String name = '';
+        
+        if (res.getStatusCode() == 200) {
+            String responseBody = res.getBody();
+            Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
+            List<Object> data = (List<Object>) responseMap.get('data');
+            Map<String,Object> nameMap=(Map<String,Object>)data[0];
+            name=nameMap.get('firstName__c')+' '+nameMap.get('lastName__c');
+        } else {
+            System.debug('Error 5: ' + res.getStatusCode() + ' ' + res.getStatus());
+            System.debug('Error Body: ' + res.getBody());
+        }
+        return name;
+    }
+} 	
+==============================================chartsjs======================================================
+import { LightningElement,api } from 'lwc';
+import { loadScript } from 'lightning/platformResourceLoader';
+import chartjs from '@salesforce/resourceUrl/ChartsJS';
+import getDataForChart1 from '@salesforce/apex/DataForChart1.getDataForChart1';
+
+export default class DCCustomcharts extends LightningElement {
+    @api recordId; 
+    isChartInit=false;
+    // apexData=[
+    //     {
+    //       numericValue: "140.090757875800",
+    //       name: "BodyWeight",
+    //       effectiveDateTime: "2024-06-18T07:25:51.337+00:00"
+    //     },
+    //     {
+    //       numericValue: "90",
+    //       name: "BloodPressure",
+    //       effectiveDateTime: "2024-06-22T07:25:51.337+00:00"
+    //     },
+    //     {
+    //       numericValue: "85",
+    //       name: "BloodPressure",
+    //       effectiveDateTime: "2024-06-24T07:25:51.337+00:00"
+    //     },
+    //     {
+    //       numericValue: "95",
+    //       name: "BloodPressure",
+    //       effectiveDateTime: "2024-06-23T07:25:51.337+00:00"
+    //     },
+    //     {
+    //       numericValue: "165.8",
+    //       name: "BodyWeight",
+    //       effectiveDateTime: "2024-06-22T07:25:51.337+00:00"
+    //     }
+    // ];
+    apexData=[];
+    xAxis=[];
+    yAxis=[];
+    // connectedCallback(){
+    //     getDataForChart1({ recordId: this.recordId })
+    //         .then(res => {
+    //             console.log('bdbdbdbd>', JSON.stringify(res.values)); 
+    //             this.apexData=[...res.values];
+    //         })
+    //         .catch(err => {
+    //             console.log('Error fetching data::', err);
+    //         });
+    // }
+    renderedCallback() {
+        if (this.isChartInit) {
+            return;
+        }
+        this.isChartInit = true;
+        loadScript(this, chartjs).then(() => {
+            getDataForChart1({ recordId: this.recordId })
+            .then(res => {
+                console.log('bd=>', JSON.stringify(res.values)); 
+                // this.apexData=[...res.values];
+                return res.values;
+            }).then(result=>{
+                console.log('result=>',result);
+                this.constructDataForChart(result);
+            }).then(()=>{
+                this.initializeChart();
+            })
+            .catch(err => {
+                console.log('Error fetching data::', err);
+            });
+        }).catch(error => {
+            console.log('Error loading Chart.js library:', error);
+        });
+    }
+    initializeChart() {
+        try {
+            const datA = {
+                labels: this.xAxis,
+                datasets: this.yAxis
+              };
+             const config = {
+                  type: 'line',
+                  data: datA,
+              };
+            const ctx = this.template.querySelector('canvas.chart').getContext('2d');
+            if (ctx) {
+                new Chart(ctx, config);
+            } else {
+                console.error('Chart context not found');
+            }
+        } catch (error) {
+            console.error('Error initializing chart:', error);
+        }
+    }
+    constructDataForChart(resData){
+        const apexData=resData;
+        console.log('DB===============>: ',JSON.stringify(apexData));
+    const xAxis= [...new Set(apexData.map(item=>
+            new Date(item.effectiveDateTime).toLocaleDateString('en-GB', {day: 'numeric', month: 'numeric', year: 'numeric'})
+        ))].map(date=>{
+        const [day, month, year] = date.split('/');
+        return `${year}-${month}-${day}`; 
+    }).sort((a, b) => new Date(a) - new Date(b)).map(date => {
+        const [year, month, day] = date.split('-');
+        return `${day}/${month}/${year}`;
+    });
+    const yAxis=[];
+    apexData.forEach((ele) =>{
+        const efdate=new Date(ele.effectiveDateTime).toLocaleDateString('en-GB', {day: 'numeric', month: 'numeric', year: 'numeric'});
+        if(ele.name==='BloodPressure'){
+            const found = yAxis.find((element) => element.label==='BloodPressure');
+            if(found){
+                found.data.splice(xAxis.indexOf(efdate), 1, parseFloat(parseFloat(ele.numericValue).toFixed(2)));
+            }else{
+                const obj={
+                  label: ele.name,
+                  data: xAxis.map(elel=>{
+                                        if(elel===efdate){
+                                          return parseFloat(parseFloat(ele.numericValue).toFixed(2));
+                                        }else{
+                                          return undefined;
+                                        }}
+                                 ),
+                  fill: false,
+                  borderWidth:1,
+                  borderColor: 'red',
+                  backgroundColor:'red',
+                  tension: 0.4
+                };
+                yAxis.push(obj);
+            }
+        }else{
+            const found = yAxis.find((element) => element.label==='BodyWeight');
+            if(found){
+                found.data.splice(xAxis.indexOf(efdate), 1, parseFloat(parseFloat(ele.numericValue).toFixed(2)));
+            }else{
+                const obj={
+                  label: ele.name,
+                data: xAxis.map(elel=>{
+                                        if(elel===efdate){
+                                          return parseFloat(parseFloat(ele.numericValue).toFixed(2));
+                                        }else{
+                                          return undefined;
+                                        }}
+                                 ),
+                  fill: false,
+                  borderWidth:1,
+                  borderColor: 'blue',
+                  backgroundColor:'blue',
+                  tension: 0.4
+                };
+                yAxis.push(obj);
+            }
+        }
+    });
+    console.log(JSON.stringify(xAxis));
+    console.log(JSON.stringify(yAxis));
+    this.xAxis=xAxis;
+    this.yAxis=yAxis;
+    }
+}
