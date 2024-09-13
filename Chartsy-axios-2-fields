@@ -1,0 +1,188 @@
+Charts : When Y-axios display two fields and x-axios only one :
+HTML:
+<template>
+    <lightning-card title="Equipment Temperature">
+        <div class="slds-m-around_medium">
+            <canvas class="linechart"></canvas>
+        </div>
+    </lightning-card>
+</template> 
+--------------------------------------------------JS---------------------------------------------------------------
+import { LightningElement } from 'lwc';
+import { loadScript } from 'lightning/platformResourceLoader';
+import ChartsJS from '@salesforce/resourceUrl/ChartsJS'; 
+import getMappedData from '@salesforce/apex/DataCloudResponseHandler.getMappedData';
+
+export default class DCCharts extends LightningElement {
+    ChartsJS; 
+    isChartInit = false;
+    chart; 
+
+    renderedCallback() {
+        if (this.isChartInit) {
+            return; 
+        }
+        this.isChartInit = true;
+
+        // Load Chart.js library
+        loadScript(this, ChartsJS)
+            .then(() => {
+                this.initializeChart();
+                this.fetchData(); // Fetch and render data on load
+            })
+            .catch(error => {
+                console.error('Error loading Chart.js library:', error);
+            });
+    }
+
+    initializeChart() {
+        const ctx = this.template.querySelector('canvas.linechart').getContext('2d');
+        this.chart = new window.Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], // Time values will be added here
+                datasets: [
+                    {
+                        label: 'Humidity', // Label for humidity
+                        data: [], // No default data
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: false,
+                    },
+                    {
+                        label: 'Temperature', // Label for temperature
+                        data: [], // No default data
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        fill: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: {
+                                size: 5 // Set font size for legend labels
+                            }
+                        }
+                    },
+                    tooltip: {
+                        bodyFont: {
+                            size: 5 // Set font size for tooltip body text
+                        },
+                        titleFont: {
+                            size: 5 // Set font size for tooltip title text
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute', // Change to 'hour' or 'day' if necessary
+                            tooltipFormat: 'DD-MM-YY HH:mm:ss',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Timestamp',
+                            font: {
+                                size: 5 // Set font size for x-axis title
+                            }
+                        },
+                        ticks: {
+                            font: {
+                                size: 5 // Set font size for x-axis ticks
+                            }
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Value',
+                            font: {
+                                size: 5 // Set font size for y-axis title
+                            }
+                        },
+                        ticks: {
+                            font: {
+                                size: 5 // Set font size for y-axis ticks
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    fetchData() {
+        getMappedData()
+            .then(result => {
+                console.log('Fetched Data:', JSON.stringify(result, null, 2));
+
+                // Check if the result has the 'data' key and is an array
+                if (result && result.data && Array.isArray(result.data)) {
+                    this.updateChart(result.data);
+                } else {
+                    console.error('Data format error: Fetched data is not in the expected format');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+            });
+    }
+
+    updateChart(data) {
+        // Clear existing data
+        this.chart.data.labels = [];
+        this.chart.data.datasets[0].data = []; // Clear humidity dataset
+        this.chart.data.datasets[1].data = []; // Clear temperature dataset
+
+        // Process and add new data
+        data.forEach(item => {
+            if (item.timestamp__c && (item.humidity__c || item.temperature__c)) {
+                // Format timestamp__c to 'DD-MM-YY HH:MM:SS'
+                const formattedTime = this.formatDateTime(item.timestamp__c);
+
+                this.chart.data.labels.push(formattedTime); // Add formatted timestamp to labels
+
+                if (item.humidity__c !== undefined) {
+                    this.chart.data.datasets[0].data.push({
+                        x: formattedTime,
+                        y: item.humidity__c
+                    }); // Add humidity__c to dataset
+                }
+
+                if (item.temperature__c !== undefined) {
+                    this.chart.data.datasets[1].data.push({
+                        x: formattedTime,
+                        y: item.temperature__c
+                    }); // Add temperature__c to dataset
+                }
+            } else {
+                console.warn('Item missing expected properties:', item);
+            }
+        });
+
+        this.chart.update(); // Update the chart with new data
+    }
+
+    formatDateTime(dateTimeString) {
+        // Create a Date object from the dateTimeString
+        const date = new Date(dateTimeString);
+
+        // Extract day, month, year, hours, minutes, and seconds
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+        const year = String(date.getFullYear()).slice(-2); // Get last 2 digits of the year
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        // Format as 'DD-MM-YY HH:MM:SS'
+        return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    }
+}
+-----------------------------------------Company logo footer-----------------------------------------------------
+<p slot="footer"><b>&#169; KT Einstein Copilot Case Inquiry</b></p>
