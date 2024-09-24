@@ -1,0 +1,28 @@
+***** when create VF Pages then use inline css:
+mail sending code :
+----------------
+// Step 1: Generate the VF page content as a PDF
+PageReference pdfPage = Page.AccountPDFPage;  // Replace with your VF page name
+pdfPage.getParameters().put('id', '001XXXXXXXXXXXX'); // Optional: Set the Account record ID
+Blob pdfBlob = pdfPage.getContentAsPDF();  // Get the PDF content
+
+// Step 2: Create the email attachment
+Messaging.EmailFileAttachment pdfAttachment = new Messaging.EmailFileAttachment();
+pdfAttachment.setFileName('AccountDetails.pdf');
+pdfAttachment.setBody(pdfBlob);
+pdfAttachment.setContentType('application/pdf');
+
+// Step 3: Prepare the email with attachment
+Messaging.SingleEmailMessage mymail = new Messaging.SingleEmailMessage();
+String[] toaddresses = new String[] { 'ddddkdk@techkvvsetti.com' };  // Replace with your recipient
+mymail.setToAddresses(toaddresses);
+mymail.setSenderDisplayName('Salesforce Support');
+mymail.setSubject('An email from Salesforce');
+mymail.setPlainTextBody('This email has been sent through Apex----------');
+mymail.setHtmlBody('<p>This email has been sent through Apexdbdbdbd</p>');
+
+// Step 4: Attach the PDF
+mymail.setFileAttachments(new Messaging.EmailFileAttachment[] { pdfAttachment });
+
+// Step 5: Send the email
+Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mymail });
