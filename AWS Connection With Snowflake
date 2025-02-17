@@ -1,0 +1,43 @@
+CREATE STORAGE INTEGRATION my_s3_integration
+  TYPE = EXTERNAL_STAGE
+  STORAGE_PROVIDER = 'S3'
+  ENABLED = TRUE
+  STORAGE_AWS_ROLE_ARN = 'arn:aws:iam::730335203498:role/snowflake-aws-role'
+  STORAGE_ALLOWED_LOCATIONS = ('s3://snowflake-bucket-17/');
+--
+DESC STORAGE INTEGRATION my_s3_integration;
+--------
+CREATE OR REPLACE STAGE my_s3_stage
+  STORAGE_INTEGRATION = my_s3_integration
+  URL = 's3://snowflake-bucket-17/000147/';
+-----------
+list @my_s3_stage;
+
+---getting issue (solve proble)--
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket"
+            ],
+            "Resource": "arn:aws:s3:::snowflake-bucket-17"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion"
+            ],
+            "Resource": "arn:aws:s3:::snowflake-bucket-17/*"
+        }
+    ]
+}
+--
+ Attach the Policy to the Role
+Go to AWS IAM Console → Roles → Find snowflake-aws-role.
+Click Permissions → Attach policies.
+Click Create Inline Policy.
+Choose JSON Editor and paste the above policy.
+Click Review Policy, give it a name (SnowflakeS3Access), and click Create.
